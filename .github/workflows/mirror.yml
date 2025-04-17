@@ -1,0 +1,34 @@
+name: mirror
+
+on:
+  schedule:
+    # run at midnight everyday
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  mirror-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: webfactory/ssh-agent
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SLAREW_LINUX_DEPLOY_KEY }}
+
+      - name: Cache linux
+        id: cache-linux
+        uses: actions/cache@v4
+        with:
+          path: linux
+          key: linux
+
+      - name: Checkout linux
+        if: steps.cache-linux.outputs.cache-hit != 'true'
+        run: git clone --mirror 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git' linux
+
+      - name: Update linux
+        run: git -C linux remote update
+
+      - name: Mirror linux
+        run: git -C linux push --mirror 'git@github.com:slarew/linux.git'
